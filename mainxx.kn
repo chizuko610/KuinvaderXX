@@ -1,0 +1,116 @@
+; Kuinvaders (くいんべーだー) (C)Kuina-chan
+const wx: float :: 1600.0
+const wy: float :: 900.0
+const ra: float :: 0.8
+const wwx: float :: @wx * @ra
+const wwy: float :: @wy * @ra
+
+class UNIT()
+	+var tex: draw@Tex
+	+var x: float
+	+var y: float
+	+var s: int
+	+var vx: float
+	+var vy: float
+	+var r: float
+	+var vr: float
+	+var beams: list<UNIT>
+	+var tmax: int
+	+var w: float
+	+var h: float
+	
+	*func ctor()
+		do me.x :: 0.0
+		do me.y :: 0.0
+		do me.s :: 0
+		do me.beams :: #list<UNIT>
+	end func
+end class
+
+func main()
+	var wndMain: wnd@Wnd :: wnd@makeWnd(null, %aspect, @wwx $ int, @wwy $ int, "KuinvadersXX")
+	var drawMain: wnd@Draw :: wnd@makeDraw(wndMain, 0, 0, @wwx $ int, @wwy $ int, %scale, %scale, false)
+	while(wnd@act())
+		do @title()
+		do @game()
+	end while
+end func
+
+; タイトル画面。
+func title()
+	var texTitle: draw@Tex :: draw@makeTex("res/title.jpg")
+	while(wnd@act() & input@pad(0, %a) <> 1)
+		do texTitle.drawScale(0.0, 0.0, @wwx, @wwy, 0.0, 0.0, @wx, @wy, draw@white)
+		do draw@render(60)
+	end while
+end func
+
+; ゲーム画面。
+func game()
+	var texBack: draw@Tex :: draw@makeTex("res/back.jpg") {背景画像}
+	var mlst: list<@UNIT> :: #list<@UNIT>
+	var stage: int :: 1
+	
+	; ステージごとのループ。
+	while loopStage(wnd@act())
+		var my: @UNIT :: #@UNIT
+		do my.tex :: draw@makeTex("res/Ku.png")
+		do my.x :: 800.0
+		do my.y :: 800.0
+		do my.vx :: 12.0
+		do my.vy :: 12.0
+		do my.w :: 140.0
+		do my.h :: 220.0
+		do mlst.add(my)
+		
+		while(wnd@act())
+			; 背景描画。
+			do texBack.drawScale(0.0, 0.0, @wwx, @wwy, 0.0, 0.0, @wx, @wy, draw@white)
+			
+			;自機表示
+			block
+				var dx: float :: (my.x - my.w / 2.0) * @ra
+				var dy: float :: (my.y - my.h / 2.0) * @ra
+				var dw: float :: my.w * @ra
+				var dh: float :: my.h * @ra
+				do my.tex.drawScale(dx, dy, dw, dh, (draw@cnt() / 10 % 3) $ float * my.w, 0.0, my.w, my.h, draw@white)
+			end block
+			
+			; 自機移動。
+			if(input@pad(0, %left) > 0)
+				do my.x :- my.vx
+			end if
+			if(input@pad(0, %right) > 0)
+				do my.x :+ my.vx
+			end if
+			if(input@pad(0, %up) > 0)
+				do my.y :- my.vy
+			end if
+			if(input@pad(0, %down) > 0)
+				do my.y :+ my.vy
+			end if
+			do my.x :: my.x.clamp(my.w / 2.0, @wx $ float - my.h / 2.0)
+			do my.y :: my.y.clamp(@wy $ float - my.h, @wy $ float)
+			
+			{
+			; 自機の弾発射およびゲームオーバー時のボタン処理。
+			if(input@pad(0, %a) = 1)
+				if(gameover = 1)
+					do stage :+ 1
+					skip loopStage {ステージクリアにつき次のステージへ}
+				elif(gameover = 2)
+					break loopStage {死亡につきタイトル画面へ}
+				end if
+				var beam: Beam :: #Beam
+				do beam.x :: playerX
+				do beam.y :: playerY - 220.0 / 2.0
+				do beams.add(beam) {リストに弾を追加}
+			end if
+			; 自機描画。Kuin@Cnt関数は1フレームごとに1ずつ増える値を返す。
+}
+			;	
+			
+			do draw@render(60)
+		end while
+	end while
+end func
